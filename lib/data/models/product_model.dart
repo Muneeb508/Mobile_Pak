@@ -23,6 +23,8 @@ class Product {
   final UserModel seller;
   final DateTime postedAt;
   final bool isSuspicious;
+  final double? latitude;
+  final double? longitude;
 
   Product({
     required this.id,
@@ -46,6 +48,8 @@ class Product {
     this.acceptedExchangeTiers = const [],
     this.exchangeDescription,
     this.isSuspicious = false,
+    this.latitude,
+    this.longitude,
   });
 
   ExchangeTier get ownTier {
@@ -93,6 +97,8 @@ class Product {
           ? json['postedAt']
           : DateTime.parse(json['postedAt'] ?? DateTime.now().toString()),
       isSuspicious: json['isSuspicious'] ?? false,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -118,5 +124,7 @@ class Product {
         'seller': seller.toJson(),
         'postedAt': postedAt.toIso8601String(),
         'isSuspicious': isSuspicious,
+        'latitude': latitude,
+        'longitude': longitude,
       };
 }

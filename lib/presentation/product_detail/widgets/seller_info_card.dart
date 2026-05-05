@@ -42,15 +42,21 @@ class SellerInfoCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          seller.name,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: Text(
+                            seller.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                        SizedBox(width: AppDimensions.gapSmall),
-                        if (seller.isVerified) VerifiedBadge(size: 14),
+                        if (seller.isVerified) ...[
+                          SizedBox(width: AppDimensions.gapSmall),
+                          VerifiedBadge(size: 14),
+                        ],
                       ],
                     ),
                     SizedBox(height: AppDimensions.gapSmall),

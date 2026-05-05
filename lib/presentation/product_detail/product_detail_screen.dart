@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
-import '../../core/constants/app_strings.dart';
 import '../../data/models/product_model.dart';
-import '../../data/models/exchange_tier.dart';
-import '../shared/verified_badge.dart';
-import '../shared/exchange_tier_chip.dart';
+import '../../core/controllers/auth_controller.dart';
+import '../../core/controllers/price_alert_controller.dart';
+import '../../core/controllers/recently_viewed_controller.dart';
+import '../../services/market_price_range_service.dart';
+import '../shared/price_insight_widget.dart';
+import '../shared/widgets/price_alert_button.dart';
+import '../shared/widgets/market_price_range_card.dart';
+import '../shared/trust_score_card.dart';
+import '../chat/chat_screen.dart';
+import '../exchange/widgets/exchange_matches_section.dart';
+import '../../services/exchange_matching_service.dart';
+import '../../data/mock/mock_exchange_products.dart';
 import 'widgets/image_slider.dart';
 import 'widgets/seller_info_card.dart';
+import 'widgets/seller_location_map.dart';
 import 'widgets/specs_section.dart';
 import 'widgets/exchange_options_section.dart';
 import 'widgets/safety_tips_banner.dart';
@@ -34,12 +43,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void initState() {
     super.initState();
     _pageController = PageController();
+    _checkPriceAlerts();
+    _trackRecentlyViewed();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkPriceAlerts() async {
+    try {
+      final authController = Get.find<AuthController>();
+      final alertController = Get.find<PriceAlertController>();
+      final userId = authController.currentUser.value?.id;
+
+      if (userId != null) {
+        await alertController.checkAlertsForProduct(userId, widget.product);
+      }
+    } catch (e) {
+      print('Error checking price alerts: $e');
+    }
+  }
+
+  void _trackRecentlyViewed() {
+    try {
+      final recentlyViewedController = Get.find<RecentlyViewedController>();
+      recentlyViewedController.addViewedProduct(widget.product);
+    } catch (e) {
+      print('Error tracking recently viewed: $e');
+    }
   }
 
   void _showExchangeOfferSheet() {
@@ -69,12 +103,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       appBar: AppBar(
         elevation: 0,
         actions: [
+          PriceAlertButton(product: widget.product),
           IconButton(
             icon: Icon(Icons.share_outlined),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(Icons.more_vert),
             onPressed: () {},
           ),
         ],
@@ -144,13 +175,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ],
                   ),
                   SizedBox(height: AppDimensions.padding),
+                  PriceInsightWidget(
+                    listingPrice: widget.product.priceValue,
+                    historicalAveragePrice: 50000,
+                    marketMinPrice: 40000,
+                    marketMaxPrice: 60000,
+                    showDetails: true,
+                  ),
+                  SizedBox(height: AppDimensions.padding),
+                  MarketPriceRangeCard(
+                    listingPrice: widget.product.priceValue,
+                    marketRange: MarketPriceRangeService.getMarketPriceRange(widget.product),
+                  ),
+                  SizedBox(height: AppDimensions.padding),
                   SellerInfoCard(seller: widget.product.seller),
+                  SizedBox(height: AppDimensions.padding),
+                  TrustScoreCard(product: widget.product),
+                  SizedBox(height: AppDimensions.padding),
+                  SellerLocationMap(product: widget.product),
                   SizedBox(height: AppDimensions.padding),
                   SpecsSection(product: widget.product),
                   SizedBox(height: AppDimensions.padding),
-                  if (widget.product.isExchangeAvailable)
+                  if (widget.product.isExchangeAvailable) ...[
                     ExchangeOptionsSection(product: widget.product),
-                  SizedBox(height: AppDimensions.padding),
+                    SizedBox(height: AppDimensions.padding),
+                    ExchangeMatchesSection(userProduct: widget.product),
+                    SizedBox(height: AppDimensions.padding),
+                  ],
                   SafetyTipsBanner(),
                   SizedBox(height: AppDimensions.padding),
                   Row(
@@ -159,7 +210,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         child: ElevatedButton.icon(
                           icon: Icon(Icons.chat_outlined),
                           label: Text('Chat'),
-                          onPressed: () {},
+                          onPressed: () => Get.to(() => ChatScreen(
+                            product: widget.product,
+                            sellerName: widget.product.seller.name,
+                          )),
                         ),
                       ),
                       SizedBox(width: AppDimensions.gapMedium),
@@ -216,20 +270,10 @@ class _ExchangeOfferBottomSheetState extends State<ExchangeOfferBottomSheet> {
   }
 
   List<Product> _getCompatibleDevices() {
-    return [
-      Product(
-        id: '1',
-        title: 'iPhone 12 Pro Max',
-        description: 'Minor scratches',
-        priceValue: 120000,
-        images: [],
-        specs: ['256GB', '85% battery', 'PTA Approved'],
-        location: 'Karachi',
-        distance: '2km',
-        seller: widget.product.seller,
-        postedAt: DateTime.now(),
-      ),
-    ];
+    return ExchangeMatchingService.findMatches(
+      userProduct: widget.product,
+      pool: mockExchangeProducts,
+    ).map((m) => m.candidate).toList();
   }
 
   @override

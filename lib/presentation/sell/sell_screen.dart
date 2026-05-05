@@ -3,25 +3,71 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
 import '../../data/models/exchange_tier.dart';
+import '../../data/models/device_specs.dart';
 import '../shared/exchange_tier_chip.dart';
 
 class SellScreen extends StatefulWidget {
-  const SellScreen({Key? key}) : super(key: key);
+  final DeviceSpecs? initialSpecs;
+
+  const SellScreen({
+    Key? key,
+    this.initialSpecs,
+  }) : super(key: key);
 
   @override
   State<SellScreen> createState() => _SellScreenState();
 }
 
 class _SellScreenState extends State<SellScreen> {
-  int _currentStep = 0;
+  late int _currentStep;
   final List<String> _images = [];
   String? _selectedListingType;
   Set<ExchangeTier> _selectedExchangeTiers = {};
+  String? _selectedCondition;
+  bool _isPtaApproved = false;
+
   final _exchangeDescriptionController = TextEditingController();
+  final _brandController = TextEditingController();
+  final _modelController = TextEditingController();
+  final _storageController = TextEditingController();
+  final _colorController = TextEditingController();
+  final _batteryHealthController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _featureController = TextEditingController();
+  final List<String> _features = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStep = widget.initialSpecs != null ? 1 : 0;
+    _preFillFromSpecs();
+  }
+
+  void _preFillFromSpecs() {
+    if (widget.initialSpecs != null) {
+      final specs = widget.initialSpecs!;
+      _brandController.text = specs.brand;
+      _modelController.text = specs.model;
+      _storageController.text = specs.storage;
+      _batteryHealthController.text = specs.batteryHealth;
+      _priceController.text = specs.estimatedPrice.toString();
+      _selectedCondition = specs.condition;
+      _isPtaApproved = specs.isPtaApproved;
+    }
+  }
 
   @override
   void dispose() {
     _exchangeDescriptionController.dispose();
+    _brandController.dispose();
+    _modelController.dispose();
+    _storageController.dispose();
+    _colorController.dispose();
+    _batteryHealthController.dispose();
+    _priceController.dispose();
+    _locationController.dispose();
+    _featureController.dispose();
     super.dispose();
   }
 
@@ -214,10 +260,12 @@ class _SellScreenState extends State<SellScreen> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         SizedBox(height: AppDimensions.padding),
-        _buildFormField('Brand', 'e.g., Apple, Samsung'),
-        _buildFormField('Model', 'e.g., iPhone 14 Pro Max'),
-        _buildFormField('Storage', 'e.g., 256GB'),
-        _buildFormField('Color', 'e.g., Space Black'),
+        _buildFormFieldWithController('Brand', 'e.g., Apple, Samsung', _brandController),
+        _buildFormFieldWithController('Model', 'e.g., iPhone 14 Pro Max', _modelController),
+        _buildFormFieldWithController('Storage', 'e.g., 256GB', _storageController),
+        _buildFormFieldWithController('Color', 'e.g., Space Black', _colorController),
+        _buildFormFieldWithController('Battery Health', 'e.g., 85%', _batteryHealthController),
+        _buildFeaturesSection(),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -236,8 +284,10 @@ class _SellScreenState extends State<SellScreen> {
               children: ['Like New', 'Excellent', 'Good', 'Fair']
                   .map((condition) => ChoiceChip(
                 label: Text(condition),
-                selected: false,
-                onSelected: (_) {},
+                selected: _selectedCondition == condition,
+                onSelected: (_) {
+                  setState(() => _selectedCondition = condition);
+                },
               ))
                   .toList(),
             ),
@@ -245,6 +295,86 @@ class _SellScreenState extends State<SellScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildFeaturesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Features & Specifications',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+        ),
+        SizedBox(height: AppDimensions.gapMedium),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _featureController,
+                decoration: InputDecoration(
+                  hintText: 'e.g., Face ID working, No scratches',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: AppDimensions.padding,
+                    vertical: AppDimensions.paddingSmall,
+                  ),
+                ),
+                onSubmitted: (_) => _addFeature(),
+              ),
+            ),
+            SizedBox(width: AppDimensions.gapMedium),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.accent,
+                borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+              ),
+              child: IconButton(
+                icon: Icon(Icons.add, color: Colors.white),
+                onPressed: _addFeature,
+              ),
+            ),
+          ],
+        ),
+        if (_features.isNotEmpty) ...[
+          SizedBox(height: AppDimensions.gapMedium),
+          Wrap(
+            spacing: AppDimensions.gapSmall,
+            runSpacing: AppDimensions.gapSmall,
+            children: _features.map((feature) {
+              return Chip(
+                label: Text(feature),
+                onDeleted: () {
+                  setState(() {
+                    _features.remove(feature);
+                  });
+                },
+                deleteIconColor: AppColors.error,
+                backgroundColor: AppColors.background,
+                side: BorderSide(color: AppColors.border),
+              );
+            }).toList(),
+          ),
+        ],
+        SizedBox(height: AppDimensions.padding),
+      ],
+    );
+  }
+
+  void _addFeature() {
+    final feature = _featureController.text.trim();
+    if (feature.isNotEmpty && !_features.contains(feature)) {
+      setState(() {
+        _features.add(feature);
+        _featureController.clear();
+      });
+    }
   }
 
   Widget _buildListingTypeStep() {
@@ -419,7 +549,7 @@ class _SellScreenState extends State<SellScreen> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         SizedBox(height: AppDimensions.padding),
-        _buildFormField('Price (Rs)', '120000'),
+        _buildFormFieldWithController('Price (Rs)', '120000', _priceController),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -444,6 +574,7 @@ class _SellScreenState extends State<SellScreen> {
                   SizedBox(width: AppDimensions.gapMedium),
                   Expanded(
                     child: TextField(
+                      controller: _locationController,
                       decoration: InputDecoration(
                         hintText: 'Select your city',
                         border: InputBorder.none,
@@ -459,7 +590,12 @@ class _SellScreenState extends State<SellScreen> {
         SizedBox(height: AppDimensions.padding),
         Row(
           children: [
-            Checkbox(value: false, onChanged: (_) {}),
+            Checkbox(
+              value: _isPtaApproved,
+              onChanged: (_) {
+                setState(() => _isPtaApproved = !_isPtaApproved);
+              },
+            ),
             Expanded(
               child: Text(
                 'PTA Approved (Higher buyer confidence)',
@@ -488,6 +624,40 @@ class _SellScreenState extends State<SellScreen> {
           ),
           SizedBox(height: AppDimensions.gapMedium),
           TextField(
+            decoration: InputDecoration(
+              hintText: hint,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormFieldWithController(
+    String label,
+    String hint,
+    TextEditingController controller,
+  ) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppDimensions.padding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+          SizedBox(height: AppDimensions.gapMedium),
+          TextField(
+            controller: controller,
             decoration: InputDecoration(
               hintText: hint,
               border: OutlineInputBorder(

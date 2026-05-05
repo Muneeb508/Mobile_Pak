@@ -7,6 +7,9 @@ import '../../core/controllers/wishlist_controller.dart';
 import '../../data/models/product_model.dart';
 import 'package:get/get.dart';
 import 'verified_badge.dart';
+import 'widgets/product_quick_actions.dart' show ProductQuickActions, QuickActionContext;
+import 'widgets/smart_tags_widget.dart';
+import 'trust_score_badge.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
@@ -91,11 +94,24 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                     imageUrl: widget.product.images.isNotEmpty ? widget.product.images.first : '',
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
-                      color: AppColors.background,
+                      color: AppColors.card,
+                      child: Center(
+                        child: Icon(
+                          Icons.phone_android,
+                          size: 40,
+                          color: AppColors.secondary.withValues(alpha: 0.3),
+                        ),
+                      ),
                     ),
                     errorWidget: (context, url, error) => Container(
-                      color: AppColors.background,
-                      child: Icon(Icons.image_not_supported, color: AppColors.secondary),
+                      color: AppColors.card,
+                      child: Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 40,
+                          color: AppColors.secondary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -143,6 +159,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                             ),
                           ),
                         ),
+                      TrustScoreBadge(product: widget.product),
                     ],
                   ),
                 ),
@@ -151,7 +168,10 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                   right: AppDimensions.paddingSmall,
                   child: GestureDetector(
                     onTap: () {
-                      wishlistController.toggleWishlist(widget.product.id);
+                      wishlistController.toggleWishlistWithFeedback(
+                        widget.product.id,
+                        productTitle: widget.product.title,
+                      );
                       widget.onWishlistToggle?.call();
                     },
                     child: Obx(() {
@@ -250,26 +270,42 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                               ),
                             ),
                             if (widget.product.acceptedExchangeTiers.isNotEmpty)
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppDimensions.gapSmall,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
-                                  border: Border.all(color: AppColors.accent),
-                                ),
-                                child: Text(
-                                  widget.product.exchangeLabel,
-                                  style: TextStyle(
-                                    color: AppColors.accent,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                              Flexible(
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppDimensions.gapSmall,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+                                    border: Border.all(color: AppColors.accent),
+                                  ),
+                                  child: Text(
+                                    widget.product.exchangeLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.accent,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
                           ],
+                        ),
+                        SizedBox(height: AppDimensions.gapMedium),
+                        SmartTagsWidget(
+                          product: widget.product,
+                          maxTags: 3,
+                          compact: true,
+                          padding: EdgeInsets.only(bottom: AppDimensions.gapMedium),
+                        ),
+                        ProductQuickActions(
+                          product: widget.product,
+                          direction: Axis.horizontal,
+                          context: QuickActionContext.browse,
                         ),
                       ],
                     ),

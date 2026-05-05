@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'theme.dart';
 import '../presentation/main_screen.dart';
+import '../presentation/splash/splash_screen.dart';
 import '../core/controllers/theme_controller.dart';
 
 class MyApp extends StatelessWidget {
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: const MainScreen(),
+      home: const SplashScreen(),
     );
   }
 }
